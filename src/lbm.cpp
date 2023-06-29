@@ -507,12 +507,20 @@ string LBM_Domain::Graphics::device_defines() const { return
 	"\n	#define def_n "                +to_string(1.333f)+"f" // refractive index of water for raytracing graphics
 	"\n	#define def_attenuation "      +to_string(ln(GRAPHICS_RAYTRACING_TRANSMITTANCE)/(float)max(max(lbm->get_Nx(), lbm->get_Ny()), lbm->get_Nz()))+"f" // (negative) attenuation parameter for raytracing graphics
 	"\n	#define def_absorption_color " +to_string(GRAPHICS_RAYTRACING_COLOR)+"" // absorption color of fluid for raytracing graphics
+	"\n	#define def_fluid_density " 	+to_string(FLUID_DENSITY)+"f" // angle with absorption
+	"\n	#define def_fluid_reflection " 	+to_string(GRAPHICS_RAYTRACING_REFLECTION)+"f" // angle with absorption
+
+	
+#ifdef GRAPHICS_REFLECTIVE_FLUID
+	"\n	#define GRAPHICS_REFLECTIVE_FLUID " // make fluid fully reflective
+#endif
 
 	"\n	#define COLOR_S (127<<16|127<<8|127)" // (stationary or moving) solid boundary
 	"\n	#define COLOR_E (  0<<16|255<<8|  0)" // equilibrium boundary (inflow/outflow)
 	"\n	#define COLOR_M (255<<16|  0<<8|255)" // cells next to moving solid boundary
 	"\n	#define COLOR_T (255<<16|  0<<8|  0)" // temperature boundary
-	"\n	#define COLOR_F (  0<<16|  0<<8|255)" // fluid
+	// "\n	#define COLOR_F (  0<<16|  0<<8|255)" // fluid
+	"\n	#define COLOR_F (  0<<192|  0<<192|192)" // fluid
 	"\n	#define COLOR_I (  0<<16|255<<8|255)" // interface
 	"\n	#define COLOR_0 (127<<16|127<<8|127)" // regular cell or gas
 	"\n	#define COLOR_X (255<<16|127<<8|  0)" // reserved type X

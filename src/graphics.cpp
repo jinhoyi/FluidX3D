@@ -652,8 +652,14 @@ int main(int argc, char* argv[]) {
 	x11_display = XOpenDisplay(0);
 	if(!x11_display) print_error("No X11 display available.");
 
-	const uint height = 720u; // (uint)DisplayHeight(x11_display, 0);
-	const uint width = height*16u/9u; // (uint)DisplayWidth(x11_display, 0);
+	// const uint height = 720u; // (uint)DisplayHeight(x11_display, 0);
+	// const uint width = height*16u/9u; // (uint)DisplayWidth(x11_display, 0);
+
+	const uint height = 640u; // (uint)DisplayHeight(x11_display, 0);
+	const uint width = 480u;
+
+
+
 	camera = Camera(width, height, 60u);
 
 	x11_window = XCreateWindow(x11_display, DefaultRootWindow(x11_display), 0, 0, width, height, 0, CopyFromParent, CopyFromParent, CopyFromParent, 0, 0);

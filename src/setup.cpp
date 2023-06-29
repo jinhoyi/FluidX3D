@@ -334,7 +334,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 
 
 
-/*void main_setup() { // Concorde; required extensions in defines.hpp: FP16S, EQUILIBRIUM_BOUNDARIES, SUBGRID, INTERACTIVE_GRAPHICS
+/* void main_setup() { // Concorde; required extensions in defines.hpp: FP16S, EQUILIBRIUM_BOUNDARIES, SUBGRID, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
 	const uint3 lbm_N = resolution(float3(1.0f, 3.0f, 0.5f), 1320u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
 	const float lbm_Re = 1000000.0f;
@@ -881,7 +881,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 
 
 
-/*void main_setup() { // hydraulic jump; required extensions in defines.hpp: FP16S, VOLUME_FORCE, EQUILIBRIUM_BOUNDARIES, SURFACE, INTERACTIVE_GRAPHICS
+/* void main_setup() { // hydraulic jump; required extensions in defines.hpp: FP16S, VOLUME_FORCE, EQUILIBRIUM_BOUNDARIES, SURFACE, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
 	LBM lbm(96u, 352u, 96u, 1u, 1u, 1u, 0.007f, 0.0f, 0.0f, -0.0005f);
 	// ###################################################################################### define geometry ######################################################################################
@@ -910,7 +910,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 
 /*void main_setup() { // dam break; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
-	LBM lbm(128u, 256u, 256u, 0.005f, 0.0f, 0.0f, -0.0002f, 0.0001f);
+	LBM lbm(64u, 128u, 128u, 0.005f, 0.0f, 0.0f, -0.0002f, 0.0001f);
 	// ###################################################################################### define geometry ######################################################################################
 	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); for(ulong n=0ull; n<lbm.get_N(); n++) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
 		if(z<Nz*6u/8u && y<Ny/8u) lbm.flags[n] = TYPE_F;
@@ -1023,7 +1023,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 
 /*void main_setup() { // raindrop impact; required extensions in defines.hpp: FP16C, VOLUME_FORCE, EQUILIBRIUM_BOUNDARIES, SURFACE, INTERACTIVE_GRAPHICS or GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
-	const uint3 lbm_N = resolution(float3(1.0f, 1.0f, 0.85f), 4000u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
+	const uint3 lbm_N = resolution(float3(1.0f, 1.0f, 0.85f), 1000u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
 	float lbm_D = (float)lbm_N.x/5.0f;
 	const float lbm_u = 0.05f; // impact velocity in LBM units
 	const float si_T = 0.010f; // simulated time in [s]
@@ -1075,7 +1075,9 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 			lbm.flags[n] = TYPE_E;
 		}
 	} // ######################################################################### run simulation, export images and data ##########################################################################
-	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
+	// lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
+	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RASTERIZE : VIS_PHI_RASTERIZE;
+
 #if defined(GRAPHICS) && !defined(INTERACTIVE_GRAPHICS)
 	lbm.run(0u); // initialize simulation
 	while(lbm.get_t()<=units.t(si_T)) { // main simulation loop
@@ -1144,7 +1146,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 
 /*void main_setup() { // cube with changing gravity; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
-	LBM lbm(96u, 96u, 96u, 0.02f, 0.0f, 0.0f, -0.001f, 0.001f);
+	LBM lbm(64u, 64u, 64u, 0.005f, 0.0f, 0.0f, -0.001f, 0.001f);
 	// ###################################################################################### define geometry ######################################################################################
 	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); for(ulong n=0ull; n<lbm.get_N(); n++) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
 		if(x<Nx*2u/3u&&y<Ny*2u/3u) lbm.flags[n] = TYPE_F;
@@ -1154,12 +1156,16 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 	lbm.run(0u); // initialize simulation
 	while(true) { // main simulation loop
 		lbm.set_f(0.0f, 0.0f, -0.001f);
+		printf("Grav Changed\n");
 		lbm.run(2500u);
 		lbm.set_f(0.0f, +0.001f, 0.0f);
+		printf("Grav Changed\n");
 		lbm.run(2500u);
 		lbm.set_f(0.0f, 0.0f, +0.001f);
+		printf("Grav Changed\n");
 		lbm.run(2500u);
 		lbm.set_f(0.0f, -0.001f, 0.0f);
+		printf("Grav Changed\n");
 		lbm.run(2000u);
 		lbm.set_f(0.0f, 0.0f, 0.0f);
 		lbm.run(3000u);
@@ -1251,4 +1257,50 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 	lbm.graphics.visualization_modes = VIS_FLAG_LATTICE|VIS_STREAMLINES;
 	lbm.run();
 	//lbm.run(1000u); lbm.u.read_from_device(); println(lbm.u.x[lbm.index(Nx/2u, Ny/2u, Nz/2u)]); wait(); // test for binary identity
+} /**/
+
+
+void main_setup() { // cube with changing gravity; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
+	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
+	LBM lbm(48u, 48u, 48u, 0.1f, 0.0f, 0.0f, -0.001f, 0.001f);
+	// ###################################################################################### define geometry ######################################################################################
+	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); for(ulong n=0ull; n<lbm.get_N(); n++) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
+		if(x<Nx*2u/3u&&y<Ny*2u/3u) lbm.flags[n] = TYPE_F;
+		if(x==0u||x==Nx-1u||y==0u||y==Ny-1u||z==0u||z==Nz-1u) lbm.flags[n] = TYPE_S;
+	} // ######################################################################### run simulation, export images and data ##########################################################################
+	// lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
+	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
+	lbm.run(0u); // initialize simulation
+	float gravity = -0.001f;
+	lbm.set_f(0.0f, 0.0f, gravity);
+	lbm.run(1200u);
+	while(true) { // main simulation loop
+		
+		for (int i = 0; i < 1200; i++) {
+			lbm.run(1u);
+			gravity += 0.001/600;
+			lbm.set_f(0.0f, 0.0f, gravity);
+		}
+		for (int i = 0; i < 1200; i++) {
+			lbm.run(1u);
+			gravity -= 0.001/600;
+			lbm.set_f(0.0f, 0.0f, gravity);
+		}
+
+
+		// lbm.set_f(0.0f, 0.0f, -0.001f);
+		// printf("Grav Changed\n");
+		// lbm.run(2500u);
+		// lbm.set_f(0.0f, +0.001f, 0.0f);
+		// printf("Grav Changed\n");
+		// lbm.run(2500u);
+		// lbm.set_f(0.0f, 0.0f, +0.001f);
+		// printf("Grav Changed\n");
+		// lbm.run(2500u);
+		// lbm.set_f(0.0f, -0.001f, 0.0f);
+		// printf("Grav Changed\n");
+		// lbm.run(2000u);
+		// lbm.set_f(0.0f, 0.0f, 0.0f);
+		// lbm.run(3000u);
+	}
 } /**/

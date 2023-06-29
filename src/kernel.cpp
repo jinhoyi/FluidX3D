@@ -701,7 +701,14 @@ string opencl_c_container() { return R( // ########################## begin of O
 	return color_mix(color_mix(s00, s01, v0), color_mix(s10, s11, v0), u0); // perform bilinear interpolation
 }
 )+R(int last_ray(const ray reflection, const ray transmission, const float reflectivity, const float transmissivity, const global int* skybox) {
+) +"#ifndef GRAPHICS_REFLECTIVE_FLUID" + R(
 	return color_mix(skybox_color(reflection, skybox), color_mix(skybox_color(transmission, skybox), def_absorption_color, transmissivity), reflectivity);
+) +"#else"+ R(
+	return color_mix(skybox_color(reflection, skybox), def_absorption_color, def_fluid_reflection);
+
+) +"#endif" + R(
+
+
 }
 )+R(float ray_grid_traverse(const ray r, const global float* phi, const global uchar* flags, float3* normal, const uint Nx, const uint Ny, const uint Nz) {
 	const float3 pa = r.origin;
@@ -808,7 +815,11 @@ string opencl_c_container() { return R( // ########################## begin of O
 	ray ray_internal; // compute internal ray and transmission ray
 	ray_internal.origin = ray_in.origin+(d+0.005f)*ray_in.direction; // start intersection points a bit behind triangle to avoid self-transmission
 	ray_internal.direction = refract(ray_in.direction, normal, def_n);
-	const float wr = clamp(sq(cb(2.0f*acospi(fabs(ray_in_normal)))), 0.0f, 1.0f); // increase reflectivity if ray intersects surface at shallow angle
+) +"#ifndef GRAPHICS_REFLECTIVE_FLUID" + R(
+	const float wr = clamp(sq(cb(def_fluid_density*acospi(fabs(ray_in_normal)))), 0.0f, 1.0f); // increase reflectivity if ray intersects surface at shallow angle
+) +"#else"+ R(
+	const float wr = 1.0f;
+) +"#endif" + R(
 	if(is_inside) { // swap ray_reflect and ray_internal
 		const float3 ray_internal_origin = ray_internal.origin;
 		ray_internal.origin = ray_reflect->origin;
@@ -2697,7 +2708,11 @@ string opencl_c_container() { return R( // ########################## begin of O
 	} else {
 		color_transmit = skybox_color(transmission, skybox);
 	}
+) + "#ifdef GRAPHICS_REFLECTIVE_FLUID" + R(
+	return color_mix(color_reflect, def_absorption_color, def_fluid_reflection);
+) + "#else" + R(
 	return color_mix(color_reflect, color_mix(color_transmit, def_absorption_color, transmissivity), reflectivity);
+) + "#endif" + R(
 }
 )+R(int raytrace_phi_next_ray_mirror(const ray reflection, const global float* phi, const global uchar* flags, const global int* skybox) {
 	int color_reflect = 0;
