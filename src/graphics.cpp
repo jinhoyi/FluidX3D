@@ -684,6 +684,7 @@ int main(int argc, char* argv[]) {
 		update_frame(frametime);
 		frametime = clock.stop();
 		sleep(1.0/(double)camera.fps_limit-frametime);
+		// frametime = clock.stop();
 		clock.start();
 		// ##########################################################################
 	}

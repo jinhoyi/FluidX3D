@@ -5,6 +5,7 @@
 #include "graphics.hpp"
 #include "units.hpp"
 #include "info.hpp"
+// #include "utilities.hpp"
 
 uint bytes_per_cell_host(); // returns the number of Bytes per cell allocated in host memory
 uint bytes_per_cell_device(); // returns the number of Bytes per cell allocated in device memory
@@ -218,6 +219,7 @@ private:
 #ifdef TEMPERATURE
 	void communicate_gi();
 #endif // TEMPERATURE
+	Clock clock;
 
 public:
 	template<typename T> class Memory_Container { // does not hold any data itsef, just links to LBM_Domain data

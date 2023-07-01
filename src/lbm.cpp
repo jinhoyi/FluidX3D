@@ -805,7 +805,10 @@ void LBM::initialize() { // write all data fields to device and call kernel_init
 	initialized = true;
 }
 
+
 void LBM::do_time_step() { // call kernel_stream_collide to perform one LBM time step
+    auto t_start = std::chrono::high_resolution_clock::now();
+
 #ifdef SURFACE
 	for(uint d=0u; d<get_D(); d++) lbm[d]->enqueue_surface_0();
 #endif // SURFACE
@@ -828,8 +831,11 @@ void LBM::do_time_step() { // call kernel_stream_collide to perform one LBM time
 #ifdef PARTICLES
 	for(uint d=0u; d<get_D(); d++) lbm[d]->enqueue_integrate_particles(); // intgegrate particles forward in time and couple particles to fluid
 #endif // PARTICLES
+
 	if(get_D()==1u) for(uint d=0u; d<get_D(); d++) lbm[d]->finish_queue(); // this additional domain synchronization barrier is only required in single-GPU, as communication calls already provide all necessary synchronization barriers in multi-GPU
 	for(uint d=0u; d<get_D(); d++) lbm[d]->increment_time_step();
+	
+	std::this_thread::sleep_until(t_start + std::chrono::microseconds(TIME_INTERVAL));
 }
 
 void LBM::run(const ulong steps) { // initializes the LBM simulation (copies data to device and runs initialize kernel), then runs LBM

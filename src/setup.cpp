@@ -1,5 +1,5 @@
 #include "setup.hpp"
-
+#include "utilities.hpp"
 
 
 #ifdef BENCHMARK
@@ -557,6 +557,18 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 	print_info("Re = "+to_string(to_uint(units.si_Re(si_length/5.5f*2.0f, si_u, si_nu))));
 	print_info("1s = "+to_string(units.t(1.0f)));
 	const float lbm_nu = units.nu(si_nu);
+
+
+	
+	printf("resolution = %u x %u \n", lbm_N.x, lbm_N.y);
+	printf("1 m = %lf LBM meter\n", units.x(1));
+	printf("gravity_force = %lf LBM force\n", units.g(9.81));
+	printf("m = %lf LBM meter\n", units.si_x(1.0f));
+	printf("kg = %lf LBM force\n", units.si_M(1.0f));
+	printf("s = %lf LBM force\n", units.si_t(1.0f));
+
+
+
 	LBM lbm(lbm_N, lbm_nu);
 	// ###################################################################################### define geometry ######################################################################################
 	Mesh* body = read_stl(get_exe_path()+"../stl/mercedesf1-body.stl"); // https://downloadfree3d.com/3d-models/vehicles/sports-car/mercedes-f1-w14/
@@ -649,6 +661,7 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 	const float lbm_u = 0.1f;
 	const uint lbm_T = 108000u;
 	LBM lbm(lbm_N, 2u, 4u, 1u, units.nu_from_Re(lbm_Re, (float)lbm_N.x, lbm_u)); // run on 2x4x1 = 8 GPUs
+
 	// ###################################################################################### define geometry ######################################################################################
 	const float size = 1.25f*lbm.size().x;
 	const float3 center = float3(lbm.center().x, 0.55f*size, lbm.center().z+0.05f*size);
@@ -1260,9 +1273,60 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 } /**/
 
 
+/*void main_setup() { // cube with changing gravity; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
+	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
+	LBM lbm(64u, 64u, 64u, 0.005f, 0.0f, 0.0f, -0.001f, 0.001f);
+	// ###################################################################################### define geometry ######################################################################################
+	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); for(ulong n=0ull; n<lbm.get_N(); n++) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
+		if(x<Nx*2u/3u&&y<Ny*2u/3u) lbm.flags[n] = TYPE_F;
+		if(x==0u||x==Nx-1u||y==0u||y==Ny-1u||z==0u||z==Nz-1u) lbm.flags[n] = TYPE_S;
+	} // ######################################################################### run simulation, export images and data ##########################################################################
+	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
+	lbm.run(0u); // initialize simulation
+	while(true) { // main simulation loop
+		lbm.set_f(0.0f, 0.0f, -0.001f);
+		printf("Grav Changed\n");
+		lbm.run(2500u);
+		lbm.set_f(0.0f, +0.001f, 0.0f);
+		printf("Grav Changed\n");
+		lbm.run(2500u);
+		lbm.set_f(0.0f, 0.0f, +0.001f);
+		printf("Grav Changed\n");
+		lbm.run(2500u);
+		lbm.set_f(0.0f, -0.001f, 0.0f);
+		printf("Grav Changed\n");
+		lbm.run(2000u);
+		lbm.set_f(0.0f, 0.0f, 0.0f);
+		lbm.run(3000u);
+	}
+} /**/
+
+
 void main_setup() { // cube with changing gravity; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
-	LBM lbm(48u, 48u, 48u, 0.1f, 0.0f, 0.0f, -0.001f, 0.001f);
+	// const uint3 lbm_N = resolution(float3(1.0f, 1.0f, 1.0f), 24); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
+	// float lbm_D = (float)lbm_N.x;
+	// const float sim_m = 1.0f; // 1 si_meter = 0.01 * sim_m
+	// const float sim_f = 1.0f; 	// 1 si_newton = 1 newton
+	const float si_T = 1.0/SIM_PER_SEC; // simulated time in [s]
+
+	float const si_nu = 1.0508E-6f; // kinematic shear viscosity [m^2/s] at 20°C and 35g/l salinity
+	// const float si_rho = 1024.8103f; // fluid density [kg/m^3] at 20°C and 35g/l salinity
+	const float si_sigma = 73.81E-3f; // fluid surface tension [kg/s^2] at 20°C and 35g/l salinity
+	const float si_g = 9.81f; // gravitational acceleration [m/s^2]
+	// // const float si_D = si_Ds[select_drop_size]; // drop diameter [m] (1-7mm)
+	// // const float si_u = si_us[select_drop_size]; // impact velocity [m/s] (4.50-9.55m/s)
+	
+	// units.set_m_kg_s(sim_m, sim_f, si_T); // calculate 3 independent conversion factors (m, kg, s)
+	// printf("10ms = %ld LBM time steps\n", units.t(sim_m));
+	// printf("gravity = %lf LBM force\n", units.f(si_g));
+	// printf("sigma = %lf LBM force\n", units.sigma(si_sigma));
+	// // print_info("gravity = "+to_string(units.si_F(si_g))+" LBM force\n");
+
+	// LBM lbm(48, 64, 64, 1u, 1u, 1u, 0.00001, 0.0f, 0.0f, -0.0001f, 0.00001);// calculate values for remaining parameters in simulation units
+	
+
+	LBM lbm(48u, 48u, 48u, 0.000001f, 0.0f, 0.0f, -0.001f, 0.0001f);
 	// ###################################################################################### define geometry ######################################################################################
 	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); for(ulong n=0ull; n<lbm.get_N(); n++) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
 		if(x<Nx*2u/3u&&y<Ny*2u/3u) lbm.flags[n] = TYPE_F;
@@ -1271,36 +1335,48 @@ void main_setup() { // cube with changing gravity; required extensions in define
 	// lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
 	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
 	lbm.run(0u); // initialize simulation
-	float gravity = -0.001f;
+	float gravity = -0.001;
 	lbm.set_f(0.0f, 0.0f, gravity);
-	lbm.run(1200u);
-	while(true) { // main simulation loop
-		
-		for (int i = 0; i < 1200; i++) {
-			lbm.run(1u);
-			gravity += 0.001/600;
-			lbm.set_f(0.0f, 0.0f, gravity);
-		}
-		for (int i = 0; i < 1200; i++) {
-			lbm.run(1u);
-			gravity -= 0.001/600;
-			lbm.set_f(0.0f, 0.0f, gravity);
-		}
-
-
-		// lbm.set_f(0.0f, 0.0f, -0.001f);
-		// printf("Grav Changed\n");
-		// lbm.run(2500u);
-		// lbm.set_f(0.0f, +0.001f, 0.0f);
-		// printf("Grav Changed\n");
-		// lbm.run(2500u);
-		// lbm.set_f(0.0f, 0.0f, +0.001f);
-		// printf("Grav Changed\n");
-		// lbm.run(2500u);
-		// lbm.set_f(0.0f, -0.001f, 0.0f);
-		// printf("Grav Changed\n");
-		// lbm.run(2000u);
-		// lbm.set_f(0.0f, 0.0f, 0.0f);
-		// lbm.run(3000u);
+	int timeStep = (int)5 / si_T;
+	printf("timeStep = %d LBM force\n", timeStep);
+	// lbm.run(timeStep);
+	while(true) {
+		auto t_start = std::chrono::high_resolution_clock::now();
+		lbm.run(timeStep);
+		auto t_end = std::chrono::high_resolution_clock::now();
+		int frames_per_sec = (int) (timeStep/std::chrono::duration<double, std::milli>(t_end-t_start).count()*1000 + 0.5); // ms
+		printf("FPS = %d \n", frames_per_sec);
+		gravity *= -1;
+		lbm.set_f(0.0f, 0.0f, gravity);
 	}
+	// printf("1 seconds = %ld steps\n", units.t(1.0f));
+	// while(true) { // main simulation loop
+		
+	// 	for (int i = 0; i < 2400; i++) {
+	// 		lbm.run(1u);
+	// 		gravity += 0.001/1200;
+	// 		lbm.set_f(0.0f, 0.0f, gravity);
+	// 	}
+	// 	for (int i = 0; i < 2400; i++) {
+	// 		lbm.run(1u);
+	// 		gravity -= 0.001/1200;
+	// 		lbm.set_f(0.0f, 0.0f, gravity);
+	// 	}
+
+
+	// 	// lbm.set_f(0.0f, 0.0f, -0.001f);
+	// 	// printf("Grav Changed\n");
+	// 	// lbm.run(2500u);
+	// 	// lbm.set_f(0.0f, +0.001f, 0.0f);
+	// 	// printf("Grav Changed\n");
+	// 	// lbm.run(2500u);
+	// 	// lbm.set_f(0.0f, 0.0f, +0.001f);
+	// 	// printf("Grav Changed\n");
+	// 	// lbm.run(2500u);
+	// 	// lbm.set_f(0.0f, -0.001f, 0.0f);
+	// 	// printf("Grav Changed\n");
+	// 	// lbm.run(2000u);
+	// 	// lbm.set_f(0.0f, 0.0f, 0.0f);
+	// 	// lbm.run(3000u);
+	// }
 } /**/
