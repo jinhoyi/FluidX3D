@@ -54,10 +54,10 @@
 #define FLUID_DENSITY 1.8f
 #define GRAPHICS_RAYTRACING_REFLECTION 0.8f 
 
-// #define BACKGROUND_IMG "../skybox/pexels-sergio-souza-5048124.png"
+#define BACKGROUND_IMG "../skybox/pexels-sergio-souza-5048124.png"
 // #define BACKGROUND_IMG "../skybox/fishing-pond-steinbach-4k.png"
 // #define BACKGROUND_IMG "../skybox/skybox8k.png"
-#define BACKGROUND_IMG "../skybox/lab2.png"
+// #define BACKGROUND_IMG "../skybox/lab2.png"
 
 
 

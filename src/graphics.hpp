@@ -11,6 +11,8 @@
 
 extern vector<string> main_arguments; // console arguments
 extern std::atomic_bool running;
+extern std::mutex bitmap_mtx; 
+extern zmq::context_t context;
 
 #ifdef GRAPHICS
 void main_label(const double frametime); // implement these three

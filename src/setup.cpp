@@ -1,6 +1,11 @@
 #include "setup.hpp"
 #include "utilities.hpp"
+#include "proto/gabriel.pb.h"
+#include "proto/openrtist.pb.h"
 
+
+extern zmq::context_t context;
+LBM* lbm_g;
 
 #ifdef BENCHMARK
 #include "info.hpp"
@@ -1301,6 +1306,40 @@ void main_setup() { // benchmark; required extensions in defines.hpp: BENCHMARK,
 	}
 } /**/
 
+void imu_thread() {
+	
+	zmq::socket_t imu_socket(context, zmq::socket_type::req);
+	imu_socket.connect("tcp://localhost:5560");
+	const float si_g = 9.81f;
+	const float sim_g = 0.0008f;
+	const float scale = sim_g / si_g;
+
+	float imu_x, imu_y, imu_z;
+	imu_x = 0;
+	imu_y = 0;
+	imu_z = -sim_g;
+
+	openrtist::Extras extras;
+	zmq::message_t pulled;
+
+	while(running) {
+		// Send request
+		zmq::message_t request (1);
+        memcpy(request.data(), "0", 1);
+		imu_socket.send(request, zmq::send_flags::none);
+
+		imu_socket.recv(pulled, zmq::recv_flags::none);
+		std::string serialized_extra(static_cast<char*>(pulled.data()), pulled.size());
+
+		extras.ParseFromString(serialized_extra);
+		imu_y = -extras.imu_value().x() * scale;
+		imu_z = -extras.imu_value().y() * scale;
+		imu_x = -extras.imu_value().z() * scale;
+
+		lbm_g->set_f(imu_x, imu_y, imu_z);
+		printf("x: %f, y: %f, z: %f\n", imu_x, imu_y, imu_z);
+	}
+}
 
 void main_setup() { // cube with changing gravity; required extensions in defines.hpp: FP16S, VOLUME_FORCE, SURFACE, INTERACTIVE_GRAPHICS
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
@@ -1324,7 +1363,8 @@ void main_setup() { // cube with changing gravity; required extensions in define
 	// // print_info("gravity = "+to_string(units.si_F(si_g))+" LBM force\n");
 
 	// LBM lbm(48, 64, 64, 1u, 1u, 1u, 0.00001, 0.0f, 0.0f, -0.0001f, 0.00001);// calculate values for remaining parameters in simulation units
-	
+	// zmq::socket_t imu_receiver(context, zmq::socket_type::pull);
+	// imu_receiver.connect("tcp://localhost:5561");
 
 	LBM lbm(48u, 48u, 48u, 0.000001f, 0.0f, 0.0f, -0.001f, 0.0001f);
 	// ###################################################################################### define geometry ######################################################################################
@@ -1335,20 +1375,37 @@ void main_setup() { // cube with changing gravity; required extensions in define
 	// lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
 	lbm.graphics.visualization_modes = lbm.get_D()==1u ? VIS_PHI_RAYTRACE : VIS_PHI_RASTERIZE;
 	lbm.run(0u); // initialize simulation
-	float gravity = -0.001;
-	lbm.set_f(0.0f, 0.0f, gravity);
-	int timeStep = (int)5 / si_T;
-	printf("timeStep = %d LBM force\n", timeStep);
+	float gravity = 0.0008;
+	lbm.set_f(0.0f, 0.0f, -gravity);
+	// int timeStep = (int)5 / si_T;
+	// printf("timeStep = %d LBM force\n", timeStep);
 	// lbm.run(timeStep);
-	while(true) {
-		auto t_start = std::chrono::high_resolution_clock::now();
-		lbm.run(timeStep);
-		auto t_end = std::chrono::high_resolution_clock::now();
-		int frames_per_sec = (int) (timeStep/std::chrono::duration<double, std::milli>(t_end-t_start).count()*1000 + 0.5); // ms
-		printf("FPS = %d \n", frames_per_sec);
-		gravity *= -1;
-		lbm.set_f(0.0f, 0.0f, gravity);
+
+	// while(true) {
+	// 	auto t_start = std::chrono::high_resolution_clock::now();
+	// 	lbm.run(timeStep);
+	// 	auto t_end = std::chrono::high_resolution_clock::now();
+	// 	int frames_per_sec = (int) (timeStep/std::chrono::duration<double, std::milli>(t_end-t_start).count()*1000 + 0.5); // ms
+	// 	printf("FPS = %d \n", frames_per_sec);
+	// 	gravity *= -1;
+	// 	lbm.set_f(0.0f, 0.0f, gravity);
+	// }
+	lbm_g = &lbm;
+	thread socket_thread(imu_thread);
+
+	// float imu_x, imu_y, imu_z;
+	// imu_x = 0;
+	// imu_y = 0;
+	// imu_z = -gravity;
+
+	// float scale = gravity / si_g;
+
+	while (true) {
+		lbm.run(500);
 	}
+	
+
+
 	// printf("1 seconds = %ld steps\n", units.t(1.0f));
 	// while(true) { // main simulation loop
 		

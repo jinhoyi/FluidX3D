@@ -20,6 +20,8 @@
 #endif // UTILITIES_REGEX
 #include <iostream>
 #include <thread> // contains <chrono>
+#include <mutex>
+#include <zmq.hpp>
 #undef min
 #undef max
 using std::string;

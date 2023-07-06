@@ -1,7 +1,12 @@
 #include "graphics.hpp"
+#include "proto/gabriel.pb.h"
 
 vector<string> main_arguments = vector<string>(); // console arguments
 std::atomic_bool running = true;
+std::mutex bitmap_mtx; 
+
+zmq::context_t context(1);
+
 
 #ifdef GRAPHICS
 Camera camera;
@@ -333,8 +338,14 @@ void draw_label(const int x, const int y, const string& s, const int color) {
 		}
 	}
 }
+
+// int test_i = 0;
 void draw_bitmap(const int* bitmap) {
+	bitmap_mtx.lock();
 	std::copy(bitmap, bitmap+(int)camera.width*(int)camera.height, camera.bitmap);
+	// camera.bitmap[test_i % ((int)camera.width*(int)camera.height)] = 1;
+	// test_i++;
+	bitmap_mtx.unlock();
 }
 
 void draw_pixel(const float3& p, const int color) {
@@ -603,7 +614,7 @@ void update_frame(const double frametime) {
 	updating_frame = true;
 	XPutImage(x11_display, x11_window, x11_gc, x11_image, 0, 0, 0, 0, camera.width, camera.height);
 	updating_frame = false;
-	camera.clear_frame(); // clear frame
+	// camera.clear_frame(); // clear frame
 }
 void input_detection() {
 	int last_x=camera.width/2, last_y=camera.height/2;
@@ -646,6 +657,39 @@ void input_detection() {
 		}
 	}
 }
+
+void send_image(const int* bitmap, zmq::socket_t& socket, int height, int width) {
+    gabriel::InputFrame frame;
+	zmq::message_t request;
+
+	// Wait for next request from the client
+	socket.recv(request, zmq::recv_flags::none);
+
+	bitmap_mtx.lock();
+    frame.add_payloads((char*) bitmap, height * width * sizeof(int));
+	bitmap_mtx.unlock();
+
+    std::string serialized_frame;
+    frame.SerializeToString(&serialized_frame);
+
+    zmq::message_t message(serialized_frame.size());
+    memcpy(message.data(), serialized_frame.data(), serialized_frame.size());
+    socket.send(message, zmq::send_flags::none);
+}
+
+void video_socket() {
+	
+	zmq::socket_t receiver(context, zmq::socket_type::rep);
+	receiver.bind("tcp://*:5559");
+	// receiver.connect("tcp://localhost:5560"); // when using router
+
+	int* bitmap = camera.bitmap;
+
+	while(running) {
+		send_image(camera.bitmap, receiver, (int)camera.height, (int)camera.width);
+	}
+}
+
 int main(int argc, char* argv[]) {
 	main_arguments = get_main_arguments(argc, argv);
 
@@ -657,9 +701,6 @@ int main(int argc, char* argv[]) {
 
 	const uint height = 640u; // (uint)DisplayHeight(x11_display, 0);
 	const uint width = 480u;
-
-
-
 	camera = Camera(width, height, 60u);
 
 	x11_window = XCreateWindow(x11_display, DefaultRootWindow(x11_display), 0, 0, width, height, 0, CopyFromParent, CopyFromParent, CopyFromParent, 0, 0);
@@ -672,20 +713,26 @@ int main(int argc, char* argv[]) {
 	x11_image = XCreateImage(x11_display, CopyFromParent, DefaultDepth(x11_display, DefaultScreen(x11_display)), ZPixmap, 0, (char*)camera.bitmap, width, height, 32, 0);
 	XSelectInput(x11_display, x11_window, KeyPressMask|KeyReleaseMask|ButtonPressMask|ButtonReleaseMask|PointerMotionMask);
 
+	thread socket_thread(video_socket);
 	thread compute_thread(main_physics); // start main_physics() in a new thread
 	thread input_thread(input_detection);
+	
+
 
 	Clock clock;
+	// sleep(2.0f);
 	double frametime = 1.0;
 	while(running) {
 		// main loop ################################################################
 		camera.update_state();
 		main_graphics();
+		// send_image(bitmap, receiver, height, width);
+		
 		update_frame(frametime);
 		frametime = clock.stop();
 		sleep(1.0/(double)camera.fps_limit-frametime);
-		// frametime = clock.stop();
-		clock.start();
+		frametime = clock.stop();
+		// clock.start();
 		// ##########################################################################
 	}
 
@@ -694,6 +741,7 @@ int main(int argc, char* argv[]) {
 	XCloseDisplay(x11_display);
 	compute_thread.join();
 	input_thread.join();
+	socket_thread.join();
 	return 0;
 }
 #endif // Linux
